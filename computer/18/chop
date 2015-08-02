@@ -1,0 +1,80 @@
+args = {...}
+
+local girth = tonumber(args[1])
+local y = 0
+
+function refuel()
+  while turtle.getFuelLevel() == 0 do
+    for i = 1,16 do
+      if turtle.getItemCount(i) > 0 then
+        b = false
+        turtle.select(i)
+        b = turtle.refuel(1)
+        if b then
+          break
+        end
+      end
+    end
+    if b then
+      break
+    end
+    print("In need of fuel.")
+    print("Press enter to continue...")
+    while true do
+      event, peram = os.pullEvent("key")
+      if event == "key" and peram == 28 then
+        break
+      end
+    end
+  end
+end
+
+function up()
+  b = false
+  while b ~= true do
+    refuel()
+    if girth == 2 then
+      turtle.dig()
+    end
+    turtle.digUp()
+    b = turtle.up()
+  end
+  y = y + 1
+end
+
+function down()
+  b = false
+  while b ~= true do
+    refuel()
+    if girth == 2 then
+      turtle.dig()
+    end
+    turtle.digDown()
+    b = turtle.down()
+  end
+end
+
+function chop()
+  refuel()
+  turtle.dig()
+  turtle.forward()
+  while turtle.detectUp() do
+    up()
+  end    
+  if girth == 2 then
+    turtle.turnRight()
+    turtle.dig()
+    turtle.forward()
+    turtle.turnLeft()
+  end
+  for i = 1,y do
+    down()
+  end
+  if girth == 2 then
+    turtle.dig()
+  end
+  refuel()
+  turtle.back()
+end
+
+chop()

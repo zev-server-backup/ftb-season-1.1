@@ -1,0 +1,124 @@
+args = {...}
+
+local xSize = tonumber(args[1])
+local zSize = tonumber(args[2])
+local action = args[3]
+
+local blockSlot = 9
+
+function refuel()
+  while turtle.getFuelLevel() == 0 do
+    for i = 1,16 do
+      if turtle.getItemCount(i) > 0 then
+        b = false
+        turtle.select(i)
+        b = turtle.refuel(1)
+        if b then
+          break
+        end
+      end
+    end
+    if b then
+      break
+    end
+    print("In need of fuel.")
+    print("Press enter to continue...")
+    while true do
+      event, peram = os.pullEvent("key")
+      if event == "key" and peram == 28 then
+        break
+      end
+    end
+  end
+end
+
+function breakLine(distance)
+  for i = 1, (distance - 1) do
+    turtle.digDown()
+    forward()
+  end
+end
+
+function selectNextSlot()
+    if blockSlot == 9 and turtle.getItemCount(9) <= 1 then
+        turtle.select(9)
+        while blockSlot < 16 do
+            blockSlot = blockSlot + 1
+            if turtle.getItemCount(blockSlot) > 0 and turtle.compareTo(blockSlot) then
+                break
+            end
+        end
+    elseif turtle.getItemCount(blockSlot) < 1 then
+        turtle.select(9)
+        while blockSlot < 16 do
+            blockSlot = blockSlot + 1
+            if turtle.getItemCount(blockSlot) > 0 and turtle.compareTo(blockSlot) then
+                break
+            end
+        end
+    end
+    turtle.select(1)
+end
+ 
+function placeBlock()
+    turtle.select(1)
+    if turtle.detectDown() then
+        turtle.digDown()
+    end
+    selectNextSlot()
+    turtle.select(blockSlot)
+    turtle.placeDown()
+end
+
+function placeLine(distance)
+  for i = 1, (distance - 1) do
+    placeBlock()
+    forward()
+  end
+end
+
+function forward()
+  refuel()
+  if turtle.detect() then
+    turtle.dig()
+  end
+  turtle.forward()
+end
+
+function left()
+  turtle.turnLeft()
+end
+
+function right()
+  turtle.turnRight()
+end
+
+function breakRect()
+  for i = 1, 2 do
+    breakLine(xSize)
+    right()
+    breakLine(zSize)
+    right()
+  end
+end
+
+function placeRect()
+  for i = 1, 2 do
+    placeLine(xSize)
+    right()
+    placeLine(zSize)
+    right()
+  end
+end
+
+function main()
+  if action == "break" then
+    breakRect()
+    return
+  elseif action == "place" then
+    placeRect()
+    return
+  end
+end
+
+main()

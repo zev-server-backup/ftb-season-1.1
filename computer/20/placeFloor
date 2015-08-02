@@ -1,0 +1,194 @@
+args = {...}
+
+local xTarget = tonumber(args[1])
+local zTarget = tonumber(args[2])
+
+local side = args[3]
+
+local blockSlotStart = 2
+local blockSlot = blockSlotStart
+local floorBlockData
+local floorBlockId
+local floorBlockMetadata
+
+
+--fuel slot is #1
+--block slots are every other slot
+--Format is placeFloor <FORWARD_SIZE>, <WIDTH>, [r or l]
+
+
+--------
+
+
+function refuel()
+    while turtle.getFuelLevel() == 0 do
+        if turtle.getItemCount(i) > 0 then
+            b = false
+            turtle.select(1)
+            b = turtle.refuel(1)
+            if b then
+              break
+            end
+        end
+        print("In need of fuel.")
+        print("Press enter to continue...")
+        while true do
+            event, peram = os.pullEvent("key")
+            if event == "key" and peram == 28 then
+                break
+            end
+        end
+    end
+end
+
+function forward()
+    refuel()
+    turtle.select(1)
+    if turtle.detect() then
+        turtle.dig()
+    end
+    turtle.forward()
+end
+
+function right()
+    turtle.turnRight()
+end
+
+function left()
+    turtle.turnLeft()
+end
+
+function nextRow(turnDirection)
+    if turnDirection == "r" then 
+        right()
+        forward()
+        right()
+    elseif turnDirection == "l" then
+        left()
+        forward()
+        left()
+    end
+end
+
+function doesSlotContainFloorBlock(slotNumber)
+    
+    if turtle.getItemCount(slotNumber) >= 1 then
+        data = turtle.getItemDetail(slotNumber)
+        if data then
+            return (data.name == floorBlockId) and (data.damage == floorBlockMetadata)
+        end
+    end
+    return false
+
+end
+
+function isGroundFloorBlock()
+    success, data = turtle.inspectDown()
+    if success then
+        return (data.name == floorBlockId) and (data.metadata == floorBlockMetadata)
+    end
+    return false
+end
+
+function selectNextSlot()
+    local needsBlocks = false
+    local iteration = 0
+    while not(turtle.getItemCount(blockSlot) > 0 and doesSlotContainFloorBlock(blockSlot)) do
+        iteration = iteration + 1
+        if iteration > 16 then
+            needsBlocks = true
+        end
+        if blockSlot >= 16 then
+            blockSlot = blockSlotStart
+        else 
+            blockSlot = blockSlot + 1
+        end
+
+        if needsBlocks then
+            print("In need of blocks.")
+            print("Press enter to continue...")
+            while true do
+                event, peram = os.pullEvent("key")
+                if event == "key" and peram == 28 then
+                    break
+                end
+            end
+            needsBlocks = false
+            iteration = 0
+            blockSlot = blockSlotStart
+        end
+    end
+    turtle.select(blockSlot)
+end
+
+function placeBlock()
+    if isGroundFloorBlock() then
+        return
+    end
+
+    --Make sure items dug up go into the top of the invintory
+    turtle.select(2)
+
+    if turtle.detectDown() then
+        turtle.digDown()
+    end
+    selectNextSlot()
+    turtle.select(blockSlot)
+    turtle.placeDown()
+end
+
+function placeRow(number)
+    for x = 1, xTarget do
+        placeBlock()
+        if x < xTarget then
+            forward()
+        end
+    end
+end
+
+function moveRect(direction)
+    for z = 1, zTarget do
+        placeRow()
+        even = (z % 2 == 0)
+        if z < zTarget then
+            if (direction == "r") and (not even) then
+                nextRow("r")
+            elseif (direction == "l") and (not even) then
+                nextRow("l")
+            elseif (direction == "r") and even then
+                nextRow("l")
+            elseif (direction == "l") and even then
+                nextRow("r")
+            end
+        end
+    end
+end
+
+function main()
+    success, floorBlockData = turtle.inspectDown()
+    if success then
+        floorBlockId = floorBlockData.name
+        floorBlockMetadata = floorBlockData.metadata
+        print("Floor is " .. floorBlockId .. " with metadata: " .. floorBlockMetadata)
+    else 
+        print("Turtle must start onto of the floor block you wish to place.")
+        return
+    end
+
+    forward()
+
+    if side == nil then
+        side = "r"
+    end
+    if xTarget == nil or xTarget < 1 then
+        print("Please enter a postive value for the x coordinate...")
+        return
+    end
+    if zTarget == nil or xTarget < 1 then
+        print("Please enter a postive value for the z coordinate...")
+        return
+    end
+    moveRect(side)
+end
+
+main()

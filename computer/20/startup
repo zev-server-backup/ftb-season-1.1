@@ -1,0 +1,26 @@
+shell.run("label", "set", "Miner")
+function load(name)
+  shell.run("reload", name)
+end
+
+if fs.exists("reload") then  
+  fs.delete("reload")
+end
+
+shell.run("pastebin", "get", "ExPP8M4v", "reload")
+
+shell.run("reload", "digger")
+shell.run("reload", "branch")
+shell.run("reload", "chop")
+shell.run("reload", "placeFloor")
+shell.run("reload", "multiBranch")
+load("border")
+
+--shell.run("reload", "pickUp")
+--shell.run("reload","treeFarm")
+--shell.run("reload","lavaRefuel")
+--shell.run("reload","rubberTreeFarm")
+shell.run("reload","bonemeal")
+
+fs.delete("startup")
+shell.run("pastebin", "get", "m8L9Fp1K", "startup")

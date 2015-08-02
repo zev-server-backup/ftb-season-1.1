@@ -1,0 +1,336 @@
+args = {...}
+
+--Slot 15: Fuel
+--Slot 16: Torches
+
+local x = 0
+local y = 0
+local z = 0
+
+--Relative to initial orientation
+--Forward = 0
+--Right = 1
+--Backward = 2
+--Left = 3
+local direction = 0
+
+local lastMinedX = 0
+local torchFreq = 0
+
+local saveFileName = "last_program"
+local saveFileDir = "saves"
+local programName = "multiBranch"
+local shouldForceExecution = false
+
+local distance
+local torchFreq
+
+local retrievingFuel = false
+
+if(args[1] ~= nil) then
+  distance = tonumber(args[1])
+end
+if(args[2] ~= nil) then
+  torchFreq = tonumber(args[2])
+end
+if(args[2] ~= nil) then
+  local shouldForceExecution = (args[3] == "force")
+end
+
+function waitForEnterKeyPress()
+  while true do event, peram = os.pullEvent("key")
+    if event == "key" and peram == 28 then
+      break
+    end
+  end
+end
+
+function refuel()
+  print("Checking Fuel Level")
+  while (turtle.getFuelLevel() < 1) do
+    print("Fueling")
+    turtle.select(15)
+    if(turtle.getItemCount(15) > 0) then
+      b = turtle.refuel(1)
+      if (b) then
+        return
+      end
+    end
+    print("In need of fuel.")
+    print("Press enter to continue...")
+    waitForEnterKeyPress()
+  end
+end
+
+function checkFullInv()
+  for i = 1,14 do
+    if turtle.getItemCount(i) == 0 then
+      return false
+    end
+  end
+  return true
+end
+ 
+function torch(frequency)
+  print("Checking Torch")
+  if (turtle.getItemCount(16) <= 1) then
+    goToStartOfBranch()
+    while((turtle.getItemCount(16) <= 1)) do
+      print("Needs Torches!")
+      print("Press enter to continue...")
+      waitForEnterKeyPress()
+    end
+    goToCurrentMiningLocation()
+  end
+
+  num = x % frequency
+  if num == 1 and turtle.getItemCount(16) > 1 then
+    print("Placing Torch")
+    back()
+    turtle.select(16)
+    turtle.placeUp()
+    turtle.select(1)
+    forward()
+  end
+end
+
+function fixDirectionBounds()
+  while (direction > 3) do
+    direction = direction - 4
+  end
+  while (direction < 0) do
+    direction = direction + 4
+  end
+end
+
+function dig()
+  while turtle.detect() do
+    turtle.dig()
+    sleep(.3)
+  end
+end
+ 
+function digUp()
+  while turtle.detectUp() do
+    turtle.digUp()
+    sleep(.5)
+  end
+end
+ 
+function digDown()
+  while turtle.detectUp() do
+    turtle.digDown()
+    sleep(.3)
+  end
+end
+ 
+function right()
+  turtle.turnRight()
+  direction = direction + 1
+  fixDirectionBounds()
+  saveDataToFile()
+end
+ 
+function left()
+  turtle.turnLeft()
+  direction = direction - 1
+  fixDirectionBounds()
+  saveDataToFile()
+end
+ 
+function forward()
+  b = false
+  while b ~= true do
+    refuel()
+    dig()
+    b = turtle.forward()
+  end
+  fixDirectionBounds()
+  if(direction == 0) then
+    x = x + 1
+  elseif(direction == 1) then
+    z = z + 1
+  elseif(direction == 2) then
+    x = x - 1
+  elseif(direction == 3) then
+    z = z - 1
+  end
+  saveDataToFile()
+end
+ 
+function up()
+  b = false
+  while b ~= true do
+    refuel()
+    digUp()
+    b = turtle.up()
+  end
+  y = y + 1
+  saveDataToFile()
+end
+ 
+function down()
+  b = false
+  while b ~= true do
+    refuel()
+    digDown()
+    b = turtle.down()
+  end
+  y = y - 1
+  saveDataToFile()
+end
+ 
+function back()
+  b = false
+  while b ~= true do
+    refuel()
+    b = turtle.back()
+    if b ~= true then
+      right()
+      right()
+      forward()
+      left()
+      left()
+    end
+  end
+  fixDirectionBounds()
+  if(direction == 0) then
+    x = x - 1
+  elseif(direction == 1) then
+    z = z - 1
+  elseif(direction == 2) then
+    x = x + 1
+  elseif(direction == 3) then
+    z = z + 1
+  end
+  saveDataToFile()
+end
+
+function mine()
+  while (checkFullInv()) do
+    goToStartOfBranch()
+    -- print("Remove items")
+    -- print("Then press enter to continue...")
+    -- waitForEnterKeyPress()
+    dropItemsIntoChest()
+    goToCurrentMiningLocation()
+  end
+  forward()
+  digUp()
+  lastMinedX = lastMinedX + 1
+  saveDataToFile()
+end
+
+function programInitFromSave()
+  if (not (fs.exists(saveFileDir))) then
+    fs.makeDir(saveFileDir)
+  end
+  if (fs.exists(saveFileDir .. "/" .. saveFileName)) then
+    local handle = fs.open(saveFileDir .. "/" .. saveFileName, "r")
+    program = handle.readLine()
+    handle.close()
+    if (programName ~= program) then
+      return false
+    else
+      loadSaveDataFromFile()
+      return true
+    end
+  else 
+    return true
+  end
+end
+
+function loadSaveDataFromFile()
+  local handle = fs.open(saveFileDir .. "/" .. saveFileName, "r")
+  handle.readLine() --moves the cursor to the second line
+  x = tonumber(handle.readLine())
+  y = tonumber(handle.readLine())
+  z = tonumber(handle.readLine())
+
+  direction = tonumber(handle.readLine())
+
+  lastMinedX = tonumber(handle.readLine())
+  distance = tonumber(handle.readLine())
+  torchFreq = tonumber(handle.readLine())
+  handle.close()
+end
+
+--warning will overwrite any data in the save file
+function saveDataToFile()
+  if (not (fs.exists(saveFileDir))) then
+    fs.makeDir(saveFileDir)
+  end
+  handle = fs.open(saveFileDir .. "/" .. saveFileName, "w")
+  handle.writeLine(programName)
+
+  handle.writeLine(x)
+  handle.writeLine(y)
+  handle.writeLine(z)
+
+  handle.writeLine(direction)
+
+  handle.writeLine(lastMinedX)
+  handle.writeLine(distance)
+  handle.writeLine(torchFreq)
+
+  handle.flush()
+  handle.close()
+end
+
+function removeSaveFile()
+  fs.delete(saveFileDir .. "/" .. saveFileName)
+end
+
+function goToStartOfBranch()
+  while(direction ~= 2) do
+    right()
+  end
+  while(x ~= 0) do
+    forward()
+  end
+end
+
+-- function goToRefuelLocation()
+--   while(direction ~= 2) do
+--     right()
+--   end
+--   while(x ~= 0) do
+    -- forward("ignoreRefuel")
+--   end
+-- end
+
+function goToCurrentMiningLocation()
+  while(direction ~= 0) do
+    right()
+  end
+  while(x ~= lastMinedX) do
+    forward()
+  end
+end
+
+function dropItemsIntoChest()
+  for i = 1,14 do
+    turtle.select(i)
+    turtle.dropDown()
+  end
+  turtle.select(1)
+end
+
+function branch()
+  while(lastMinedX < distance) do
+    mine()
+    torch(torchFreq)
+  end
+  goToStartOfBranch()
+  dropItemsIntoChest()
+  back()
+  removeSaveFile()
+end
+
+
+-- if(shouldForceExecution) then
+  removeSaveFile()
+-- end
+if(programInitFromSave()) then
+  branch()
+end

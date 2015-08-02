@@ -1,0 +1,18 @@
+function bonemeal()
+    turtle.select(16)
+    turtle.place()
+end
+
+function plantTree()
+  if turtle.detect() == false then
+    turtle.select(1)
+    turtle.place()
+  end
+end
+
+while true do
+  if turtle.detect() then
+    bonemeal()
+  end
+plantTree()
+end
